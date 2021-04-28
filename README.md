@@ -1,22 +1,29 @@
 # mktcmenu
 
-A minimal, headless menu descriptor code generator for TCMenu.
+A minimal, headless menu descriptor code generator for TcMenu.
 
 ![easyuno](./docs/easyuno.png)
 
-## Improvements over the official TCMenu Designer (at least to me)
+## IMPORTANT
+
+This project has no affiliation with The Coders Corner. Please **DO NOT** asking for support via TcMenu support channels (e.g. forums and GitHub issues) for any mktcmenu related issues. If you have enough reason to believe that the cause of a specific issue was from TcMenuLib, please first **minimally reproduce** it in **official TcMenu Designer** before filing an issue on **TcMenuLib's issue tracker**. If the same issue cannot be reproduced with the official Designer, feel free to open an issue **here** instead so I can take a look.
+
+Also for commercial use of the TcMenu library with mktcmenu see below (search "commercial use" on this page).
+
+## Improvements over the official TcMenu Designer (at least to me)
 
 - Text-based descriptor format optimized specifically for readability and writing experience.
 - Only generates the menu descriptor entries aka. things that are actually painful to write and maintain by hand and nothing platform/peripheral-specific unless absolutely necessary.
-  - This means no initialization code/LCD backend code is generated and you have to write those by hand. (It's usually just one-off and not that hard! Check [TCMenu's documentation](https://www.thecoderscorner.com/products/arduino-libraries/tc-menu#display-plugins), [TCMenu code examples](https://github.com/davetcc/tcMenuLib/commits/master/examples) and [menu generator source code](https://github.com/davetcc/tcMenu/tree/master/tcMenuGenerator/src/main/resources/packaged-plugins) for details.)
+  - This means no initialization code/LCD backend code is generated and you have to write those by hand. (It's usually just one-off and not that hard! Check [TcMenu's documentation](https://www.thecoderscorner.com/products/arduino-libraries/tc-menu#display-plugins), [TcMenu code examples](https://github.com/davetcc/tcMenuLib/commits/master/examples) and [menu generator source code](https://github.com/davetcc/tcMenu/tree/master/tcMenuGenerator/src/main/resources/packaged-plugins) for details.)
   - In exchange you got better support for "unsupported hardware" that works perfectly in reality.
 - Simple and fully automagic EEPROM management (just write `persistent: true`) with append-only allocation strategy for out-of-the-box backwards compatibility.
 - Runs headlessly (although the official designer has this pending too).
 - Hopefully better integration with PlatformIO.
-- Was a great way for me to learn the "gotchas"/documentation bugs of TCMenu.
+- Was a great way for me to learn the "gotchas"/documentation bugs of TcMenu.
 - No more asking for registration upon every start (evil laugh).
+  - Apparently for commercial use of TcMenu you have to register with TCC (see https://github.com/davetcc/tcMenu/issues/87#issuecomment-828440985). So please do that in the official TcMenu Designer at least once if you somehow decided to use mktcmenu in your commercial projects.
 
-## Difference of generated code over TCMenu Designer
+## Difference of generated code over TcMenu Designer
 
 - Instead of outputting the main header as `<menu-name>_menu.h`, this generator outputs it simply as `<menu-name>.h` where the menu name is the same as the basename of the tcmdesc file.
 - There's no `setupMenu()` function that does platform+menu+peripheral-specific initialization, instead the necessary objects for initializing the menu are provided in several objects and functions.
