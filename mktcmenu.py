@@ -8,10 +8,14 @@ import argparse
 import os
 import io
 import copy
+import json
+from importlib import resources
 from collections import UserDict
 from typing import Optional, Sequence, Mapping, Any, IO
 
 # TODO is this actually safe?
+import mktcmenu_schemas
+import jsonschema
 import yaml
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -654,6 +658,10 @@ def parse_tcdesc_yaml_object(obj: Mapping):
 
 # TODO change paths to path-like?
 def do_codegen(desc_path: str, out_dir: str, source_dir: str, include_dir: str, instance_name: str, eeprom_map: EEPROMMap, use_pgmspace: bool):
+    # Load schema
+    with resources.open_text(mktcmenu_schemas, 'tcmdesc.schema.json') as f:
+        desc_schema = json.load(f)
+
     full_source_dir = os.path.normpath(os.path.join(out_dir, source_dir))
     full_include_dir = os.path.normpath(os.path.join(out_dir, include_dir))
     os.makedirs(full_source_dir, exist_ok=True)
@@ -672,6 +680,9 @@ def do_codegen(desc_path: str, out_dir: str, source_dir: str, include_dir: str, 
 
     with open(desc_path, 'r') as f:
         desc = yaml_load(f)
+
+    jsonschema.validate(desc, desc_schema)
+
     bufsrc = io.StringIO()
     bufhdr = io.StringIO()
 

@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 pyyaml = "*"
+jsonschema = "*"
 
 [dev-packages]
 pylint = "*"

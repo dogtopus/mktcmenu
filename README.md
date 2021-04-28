@@ -34,9 +34,22 @@ A minimal, headless menu descriptor code generator for TCMenu.
 
 TODO
 
+## Use the schema
+
+mktcmenu uses a JSON schema to validate the supplied tcmdesc files. The schema can also be used with editors like VSCode to ease the editing of tcmdesc file.
+
+To set it up in VSCode, add the following to your `settings.json`:
+
+```
+    "yaml.schemas": {
+        "/path/to/mktcmenu/mktcmenu_schemas/tcmdesc.schema.json": "*.tcmdesc.yaml"
+    }
+```
+
+Replace `/path/to/mktcmenu` with absolute or relative (in case of workspace specific configuration) path to the mktcmenu project root.
+
 ## TODO
 
 - More menu item types (i.e. most of the MultiPart entries).
 - Better error handling and tcmdesc linting.
-- YAML schema for VSCode, etc.
 - EEPROM mapping consistency check (overlaps, etc.).
