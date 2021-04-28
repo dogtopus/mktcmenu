@@ -9,7 +9,7 @@ import os
 import io
 import copy
 from collections import UserDict
-from typing import Optional, Sequence, Any, IO
+from typing import Optional, Sequence, Mapping, Any, IO
 
 # TODO is this actually safe?
 import yaml
@@ -540,7 +540,7 @@ class SubMenuType(MenuBaseType):
     def __init__(self, props, alias):
         super().__init__(props, alias)
         v = functools.partial(self._validate_entry, props)
-        self.items = v('items', required=True)
+        self.items = tuple(map(parse_tcdesc_yaml_object, v('items', required=True)))
         self.auth = v('auth', default=False)
 
     def get_serialized_size(self):
@@ -590,7 +590,7 @@ class ActionType(MenuBaseType):
             0, self.get_callback_ref(),
         ), tuple(), cpp_type_prefix_minfo='Any')
 
-YAML_TAG_SUFFIXES = {
+YAML_TAG_SUFFIXES: Mapping[str, MenuBaseType] = {
     'analog': AnalogType,
     'fixed': AnalogType,
     'number': AnalogType,
@@ -636,14 +636,21 @@ YAML_TAG_SUFFIXES = {
     # 'rgba': ColorType,
 }
 
-def tcdesc_multi_constructor(loader: yaml.Loader, tag_suffix, node):
-    if tag_suffix in YAML_TAG_SUFFIXES:
-        node_parsed = loader.construct_mapping(node)
-    else:
-        raise RuntimeError(f'Unknown TCMenu menu entry type {tag_suffix}')
-    return YAML_TAG_SUFFIXES[tag_suffix](node_parsed, alias=tag_suffix)
+#def tcdesc_multi_constructor(loader: yaml.Loader, tag_suffix, node):
+#    if tag_suffix in YAML_TAG_SUFFIXES:
+#        node_parsed = loader.construct_mapping(node)
+#    else:
+#        raise RuntimeError(f'Unknown TCMenu menu entry type {tag_suffix}')
+#    return YAML_TAG_SUFFIXES[tag_suffix](node_parsed, alias=tag_suffix)
 
-yaml.add_multi_constructor('!tcm/', tcdesc_multi_constructor, Loader=Loader)
+#yaml.add_multi_constructor('!tcm/', tcdesc_multi_constructor, Loader=Loader)
+
+def parse_tcdesc_yaml_object(obj: Mapping):
+    if obj['type'] in YAML_TAG_SUFFIXES:
+        constructor = YAML_TAG_SUFFIXES[obj['type']]
+        return constructor(obj, obj['type'])
+    else:
+        raise RuntimeError(f'Unknown TCMenu menu entry type {obj["type"]}')
 
 # TODO change paths to path-like?
 def do_codegen(desc_path: str, out_dir: str, source_dir: str, include_dir: str, instance_name: str, eeprom_map: EEPROMMap, use_pgmspace: bool):
@@ -700,14 +707,16 @@ def do_codegen(desc_path: str, out_dir: str, source_dir: str, include_dir: str, 
         emit_cppeol(bufhdr)
 
         ctx = CodeEmitterContext(bufsrc, bufhdr, eeprom_map, namespace, None, use_pgmspace)
+        parsed_items = tuple(map(parse_tcdesc_yaml_object, desc['items']))
+
         # Output menu descriptor
-        for i, item in enumerate(desc["items"]):
-            ctx.next_entry = desc["items"][i+1] if len(desc["items"]) > i+1 else None
+        for i, item in enumerate(parsed_items):
+            ctx.next_entry = parsed_items[i+1] if len(parsed_items) > i+1 else None
             item.emit_code(ctx)
             callback_list.update(item.list_callbacks())
 
         # Define a getter for the root of menu descriptor
-        bufhdr.write(f'constexpr MenuItem *getRootMenuItem() {{ return &menu{desc["items"][0].generate_id()}; }}\n')
+        bufhdr.write(f'constexpr MenuItem *getRootMenuItem() {{ return &menu{parsed_items[0].generate_id()}; }}\n')
 
         bufhdr.write('\n')
 
@@ -715,7 +724,7 @@ def do_codegen(desc_path: str, out_dir: str, source_dir: str, include_dir: str, 
         emit_cppdef(bufsrc, 'setupMenuDefaults', 'void')
         bufsrc.write('() ')
         with emit_cppobjarray(bufsrc, multiline=True):
-            for item in desc["items"]:
+            for item in parsed_items:
                 item.emit_default_flags_block(bufsrc, namespace)
 
         emit_cppdef(bufhdr, 'setupMenuDefaults', 'void')

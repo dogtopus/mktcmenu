@@ -1,0 +1,331 @@
+{
+    "$id": "https://example.com/tcmdesc.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "a",
+    "type": "object",
+    "required": ["name", "uuid", "items"],
+    "properties": {
+        "name": {
+            "description": "Name of the menu. Also displays as the root menu title.",
+            "type": "string"
+        },
+        "uuid": {
+            "description": "UUID of the menu/remote protocol.",
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+        },
+        "items": {
+            "description": "List of items included in the menu.",
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/menu_item" }
+        }
+    },
+    "additionalProperties": false,
+    "$defs": {
+        "cppsym": {
+            "$comment": "C++ symbol.",
+            "type": "string",
+            "pattern": "^[A-Za-z_]+[A-Za-z0-9_]*$"
+        },
+        "cppsym_insuffix": {
+            "$comment": "Infix/suffix of a C++ symbol. Also used for EEPROM field identification.",
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]*$"
+        },
+        "menu_base_item": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "type": {
+                    "description": "Type of menu item.",
+                    "type": "string",
+                    "enum": [
+                        "analog", "fixed", "number",
+                        "large-number", "bcd",
+                        "float",
+                        "enum", "option", "static-option",
+                        "scroll-choice", "scroll", "dynamic-option",
+                        "boolean", "bool", "truefalse", "switch", "onoff", "yesno",
+                        "submenu", "menu",
+                        "action"
+                    ]
+                },
+                "id": {
+                    "allOf":[
+                        { "$ref": "#/$defs/cppsym_insuffix" },
+                        { "description": "A part of the C++ identifier that universally identify the menu entry." }
+                    ]
+                },
+                "id-suffix": {
+                    "allOf":[
+                        { "$ref": "#/$defs/cppsym_insuffix" },
+                        { "description": "A suffix to the ID. Used for resolving ID confilcts." }
+                    ]
+                },
+                "name": {
+                    "description": "The display name for the menu item. By default the menu ID is generated from this so it's advised to keep this unique enough.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 19
+                },
+                "persistent": {
+                    "description": "Whether to store this value in EEPROM.",
+                    "type": "boolean"
+                },
+                "read-only": {
+                    "description": "Whether or not to disable editing for this menu item.",
+                    "type": "boolean"
+                },
+                "local-only": {
+                    "description": "Whether or not to remove this menu item from the remote control interface.",
+                    "type": "boolean"
+                },
+                "visible": {
+                    "description": "Control the default visibility of the menu item.",
+                    "type": "boolean"
+                },
+                "callback": {
+                    "allOf":[
+                        { "$ref": "#/$defs/cppsym" },
+                        { "description": "A C++ identifier for a callback function, which will be called with a numerical index of the menu item when the menu item is selected." }
+                    ]
+                }
+            }
+        },
+        "analog_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type"],
+                    "allOf": [
+                        {
+                            "oneOf": [
+                                { "required": ["max"] },
+                                { "required": ["precision"] }
+                            ]
+                        }, {
+                            "oneOf": [
+                                { "required": ["min"] },
+                                { "required": ["offset"] },
+                                { "allOf": [{ "not": { "required": ["min"] } }, { "not": { "required": ["offset"] } }]}
+                                
+                            ]
+                        }
+                    ],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["analog", "fixed", "number"]
+                        },
+                        "divisor": {
+                            "description": "The amount to be divided from the value before displaying.",
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 65535
+                        },
+                        "unit": {
+                            "description": "Unit to be added after the value.",
+                            "type": "string",
+                            "maxLength": 4
+                        },
+                        "min": {
+                            "description": "The minimum value that this item can take. An alias of offset.",
+                            "type": "integer",
+                            "minimum": -32768,
+                            "maximum": 32767
+                        },
+                        "max": {
+                            "description": "The maximum value that this item can take.",
+                            "type": "integer",
+                            "minimum": -32768,
+                            "maximum": 65535
+                        },
+                        "precision": {
+                            "description": "The maximum precision of the storage register that backs this item (in max-min).",
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "offset": {
+                            "description": "Offset of the storage register. The displayed number will be register+offset.",
+                            "type": "integer",
+                            "minimum": -32768,
+                            "maximum": 32767
+                        }
+                    }
+                }
+            ]
+        },
+        "large_number_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["large-number", "bcd"]
+                        },
+                        "decimal-places": {
+                            "description": "Number of digits (of all digits specified in length) that are used as fractional part.",
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9
+                        },
+                        "length": {
+                            "description": "Maximum number of digits of the number.",
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 12
+                        },
+                        "signed": {
+                            "description": "Whether or not to allow signed values.",
+                            "type": "boolean"
+                        }
+                    }
+                }
+            ]
+        },
+        "float_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["float"]
+                        },
+                        "decimal-places": {
+                            "description": "Rounding the value to this decimal places before dsplaying.",
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535
+                        }
+                    }
+                }
+            ]
+        },
+        "enum_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type", "options"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["enum", "option", "static-option"]
+                        },
+                        "options": {
+                            "description": "List of options available.",
+                            "type": "array",
+                            "minItems": 1,
+                            "items": { "type": "string", "minLength": 1 }
+                        }
+                    }
+                }
+            ]
+        },
+        "scroll_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type", "item-size", "items", "data-source"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["scroll-choice", "scroll", "dynamic-option"]
+                        },
+                        "item-size": {
+                            "description": "Maximum length of each item.",
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 2147483647
+                        },
+                        "items": {
+                            "description": "Number of items in the scroll list.",
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 2147483647
+                        },
+                        "data-source": {
+                            "description": "The data source of the list in the format of <mode>:<identifier>. Can be EEPROM/RAM-backed (mode=eeprom/ram) or be driven with a custom callback following the runtime menu callback signature (mode=custom-renderfn)",
+                            "type": "string",
+                            "pattern": "^((eeprom|array-in-eeprom):[A-Za-z0-9_]*|(ram|array-in-ram|custom-renderfn):[A-Za-z_]+[A-Za-z0-9_]*)$"
+                        }
+                    }
+                }
+            ]
+        },
+        "boolean_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["boolean", "bool", "truefalse", "switch", "onoff", "yesno"]
+                        },
+                        "response": {
+                            "description": "Format of displayed value.",
+                            "type": "string",
+                            "enum": ["true-false", "on-off", "yes-no"]
+                        }
+                    }
+                }
+            ]
+        },
+        "submenu_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type", "items"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["submenu", "menu"]
+                        },
+                        "auth": {
+                            "description": "Whether or not to enable PIN authentication for this submenu. (Reserved. Currently not implemented.)",
+                            "type": "boolean"
+                        },
+                        "items": {
+                            "description": "List of items included in the submenu.",
+                            "type": "array",
+                            "minItems": 1,
+                            "items": { "$ref": "#/$defs/menu_item" }
+                        }
+                    }
+                }
+            ]
+        },
+        "action_item": {
+            "allOf": [
+                { "$ref": "#/$defs/menu_base_item" },
+                {
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["action"]
+                        }
+                    }
+                }
+            ]
+        },
+        "menu_item": {
+            "anyOf": [
+                { "$ref": "#/$defs/analog_item" },
+                { "$ref": "#/$defs/large_number_item" },
+                { "$ref": "#/$defs/float_item" },
+                { "$ref": "#/$defs/enum_item" },
+                { "$ref": "#/$defs/scroll_item" },
+                { "$ref": "#/$defs/boolean_item" },
+                { "$ref": "#/$defs/submenu_item" },
+                { "$ref": "#/$defs/action_item" }
+            ]
+        }
+    }
+}
